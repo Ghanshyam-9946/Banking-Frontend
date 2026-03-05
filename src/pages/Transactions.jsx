@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
 export default function Transactions() {
+
   const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     fromAccount: "",
     toAccount: "",
@@ -22,40 +25,51 @@ export default function Transactions() {
     fetchAccounts();
   }, []);
 
-  const handleTransfer = async (e) => {
-    e.preventDefault();
+const handleTransfer = async (e) => {
+  e.preventDefault();
 
-    const payload = {
-      fromAccount: form.fromAccount?.trim(),
-      toAccount: form.toAccount?.trim(),
-      amount: Number(form.amount),
-      idempotencyKey: Date.now().toString()
-    };
-
-    if (!payload.fromAccount || !payload.toAccount || !payload.amount) {
-      alert("All fields are required ❌");
-      return;
-    }
-
-    try {
-      await axios.post("/transactions", payload);
-
-      alert("Transfer Successful 💸");
-
-      fetchAccounts();
-
-      setForm({
-        fromAccount: "",
-        toAccount: "",
-        amount: ""
-      });
-
-    } catch (err) {
-      console.log(err.response?.data || err);
-      alert(err.response?.data?.message || "Transfer Failed ❌");
-    }
+  const payload = {
+    fromAccount: form.fromAccount?.trim(),
+    toAccount: form.toAccount?.trim(),
+    amount: Number(form.amount),
+    idempotencyKey: Date.now().toString()
   };
 
+  if (!payload.fromAccount || !payload.toAccount || !payload.amount) {
+    alert("All fields are required ❌");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+
+    const res = await axios.post("/transactions", payload, {
+      timeout: 30000
+    });
+
+    console.log("Transaction response:", res.data);
+
+    alert("Transfer Successful 💸");
+
+    await fetchAccounts();
+
+    setForm({
+      fromAccount: "",
+      toAccount: "",
+      amount: ""
+    });
+
+  } catch (err) {
+
+    console.log("Transaction error:", err);
+
+    alert(err?.response?.data?.message || "Transfer Failed ❌");
+
+  }
+
+  setLoading(false);
+};
   const getBalance = (acc) => {
     return acc.balance ?? acc.availableBalance ?? acc.currentBalance ?? 0;
   };
@@ -176,11 +190,17 @@ export default function Transactions() {
           />
 
           {/* Button */}
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-          >
-            Transfer
-          </button>
+         <button
+  type="submit"
+  disabled={loading}
+  className={`text-white font-semibold rounded-lg px-4 py-3 ${
+    loading
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-600 hover:bg-blue-700"
+  }`}
+>
+  {loading ? "Processing..." : "Transfer"}
+</button>
 
         </form>
 
